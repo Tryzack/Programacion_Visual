@@ -5,75 +5,42 @@ import java.net.Socket;
 import java.io.*;
 
 
-public class Servidor extends Thread{
+public class Servidor	{
 	private ServerSocket srv;
-	private final int puerto = 7531;
-	private Socket srvListen;
 	
-	public Servidor() {
+	public Servidor(ServerSocket serverSocket) {
+		this.srv = serverSocket;
 		
 	}
-
-	public void run() {
-		Servidor s = new Servidor();
-		s.listener_socket();	
-	}
 	
-	public static void main(String[] args) {
-		while(true) {
-			Servidor s = new Servidor();
-			s.listener_socket();			
-		}
-	}
-	
-	public boolean createSocketSrv(int port) {
+	public void startServer() {
 		try {
-			
-			srv = new ServerSocket(port);
-			return true;
-			
+			while(!srv.isClosed()) {
+				Socket socket = srv.accept();
+				System.out.println("Un nuevo cliente se ha conectado!");
+				ClientHandler clientHandler = new ClientHandler(socket);
+				
+				Thread thread = new Thread(clientHandler);
+				thread.start();
+			}
 		} catch (IOException e) {
 			
-			return false;
-			
 		}
 	}
-
-	public void listener_socket() {
-		createSocketSrv(puerto);
+	
+	public void closeServerSocket() {
 		try {
-				System.out.println("esperando solicitud...!");
-				srvListen = srv.accept();
-				InputStream in = srvListen.getInputStream();
-				InputStreamReader isr = new InputStreamReader(in);
-				BufferedReader br = new BufferedReader(isr);
-				String msg = br.readLine();
-				System.out.println("Mensaje Recibido: "+msg);
-				this.sentToCliente("Mensaje recibido ok ... (Srv)");
+			if(srv != null) {
 				srv.close();
-				
-		}catch (IOException e)
-	    {
-		      System.out.print("error al escuchar el mensaje del cliente..!");
-		    }
-
+			}
+		} catch (IOException e ) {
+			e.printStackTrace();
+		}
 	}
 	
-	public void sentToCliente(String data) {
-		try
-	    {
-	      System.out.println("Enviando Respuesta...");
-	      BufferedWriter wr = new BufferedWriter( new 
-	      OutputStreamWriter(srvListen.getOutputStream()));
-	      wr.write(data);
-	      wr.flush();
-	      wr.close();
-	      srvListen.close();
-	    }
-	    catch (IOException e)
-	    {
-	      System.out.println("error al enviar respuesta:"+e.getMessage());
-	    }
-
+	public static void main(String[] args) throws IOException {
+		ServerSocket serverSocket = new ServerSocket(7532);
+		Servidor servidor = new Servidor(serverSocket);
+		servidor.startServer();
 	}
 }

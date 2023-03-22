@@ -1,90 +1,90 @@
 package sockets;
 
-import java.net.Socket;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.*;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.Socket;
+import java.util.Scanner;
 
 public class Cliente {
-	private String msg;
-	private Socket cliente;
-	private static InputStreamReader streamIn =  new InputStreamReader(System.in);
-	private static BufferedReader in =  new BufferedReader(streamIn, 1);
+	private Socket socket;
+	private BufferedReader bufferedReader;
+	private BufferedWriter bufferedWriter;
+	private String username;
 	
-	public Cliente()
-	{
-		msg="";
+	public Cliente(Socket socket, String username) {
+		try {
+			this.socket = socket;
+			this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+			this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			this.username = username;
+		} catch (IOException e) {
+			cerrartodo(socket, bufferedReader, bufferedWriter);
+		}
 	}
 	
-	public static void main(String[] args)
-	{
-		try{
-			Cliente c = new Cliente();
-			System.out.print("Introduzca Mensaje:");
-			c.msg = c.readKey();
-			c.createSocketClient("localHost", 7531);
-			c.socketSend(c.msg);
-			Thread.sleep(1000);
-			System.out.print(c.getServerMsj());
-			c.cliente.close();
+	public void mensaje() {
+		try {
+			bufferedWriter.write(username);
+			bufferedWriter.newLine();
+			bufferedWriter.flush();
 			
-		}
-		catch(Exception e){
-			System.out.print(e.getMessage());
-		}
-	}
-	
-	public String readKey() {
-		String line = null;
-		try{
-			line = in.readLine();
-		}	catch (IOException e) {
-			System.out.println("Error in SimpleIO.readLine: " +  e.getMessage());
-			System.exit(-1);
-		}
-		return line;
-	}
-
-	//Se crea una instancia del socket client
-	public boolean createSocketClient(String host, int port)
-	{
-		try{
-			cliente = new Socket(host, port);
-			return true;
-		}
-		catch (IOException e){
-			return false;
-		}
-	}
-	
-	public String getServerMsj()
-	{
-		try	{
-			BufferedReader rd = new 
-			BufferedReader(new InputStreamReader(cliente.getInputStream()));
-			String contenido="**************************************\n";
-			while (rd.ready()) {
-				contenido+= rd.readLine()+"\n";
+			Scanner scanner = new Scanner(System.in);
+			while(socket.isConnected()) {
+				String mensaje = scanner.nextLine();
+				bufferedWriter.write(username + ": "+ mensaje);
+				bufferedWriter.newLine();
+				bufferedWriter.flush();
 			}
-			rd.close();
-			contenido+="**************************************\n";
-			return contenido;
-		}
-		catch (IOException e){
-			return "error en proceso de obtención de mensaje desde el servidor";
+		} catch(IOException e) {
+			cerrartodo(socket, bufferedReader, bufferedWriter);
 		}
 	}
-
-	public boolean socketSend(String data)
-	{
-		try{
-			PrintStream ps = new PrintStream(cliente.getOutputStream());
-			ps.println(data);
-			ps.flush();
-			return true;
-		}
-		catch(IOException e){
-			return false;
+	
+	public void listener() {
+		new Thread(new Runnable() {
+			
+			public void run() {
+				String mensajedelGrupo;
+				
+				while(socket.isConnected()) {
+					try {
+						mensajedelGrupo = bufferedReader.readLine();
+						System.out.println(mensajedelGrupo);
+					} catch (IOException e) {
+						cerrartodo(socket, bufferedReader, bufferedWriter);
+					}
+				}
+			}
+		}).start();
+	}
+	
+	public void cerrartodo(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter) {
+		try {
+			if(bufferedReader != null) {
+				bufferedReader.close();
+			}
+			if(bufferedWriter != null) {
+				bufferedWriter.close();
+			}
+			if(socket != null) {
+				socket.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
-
+	
+	public static void main(String[] args) throws IOException {
+		Scanner scanner = new Scanner(System.in);
+		System.out.println("Introduce tu usuario para acceder al chat grupal");
+		String username = scanner.nextLine();
+		Socket socket = new Socket("localhost", 7531);
+		Cliente cliente = new Cliente(socket, username);
+		System.out.println("Bienvenido al chat grupal, envia tu primer mensaje: ");
+		cliente.listener();
+		cliente.mensaje();
+	}
 }
