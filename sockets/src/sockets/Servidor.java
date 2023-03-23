@@ -39,7 +39,7 @@ public class Servidor	{
 	}
 	
 	public static void main(String[] args) throws IOException {
-		ServerSocket serverSocket = new ServerSocket(7532);
+		ServerSocket serverSocket = new ServerSocket(7531);
 		Servidor servidor = new Servidor(serverSocket);
 		servidor.startServer();
 	}
